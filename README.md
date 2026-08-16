@@ -22,7 +22,7 @@ glance.
 ## Credits / data sources
 
 - **Original app:** https://github.com/brendansudol/conan-jokes
-  (live demo: https://brendansudol.github.io/conan-jokes/\)
+  (live demo: https://brendansudol.github.io/conan-jokes/)
 - **Original Conan joke data:** https://github.com/brendansudol/conan-jokes-data
 - **Additional multi-host joke data:** https://github.com/duowang/Monologue
   (Newsmax & Latenighter archives)
