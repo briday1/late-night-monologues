@@ -1,0 +1,10 @@
+{
+  "name": "late-night-monologues",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static, no-build late-night monologue joke library. Search 15,000+ setup-and-punchline jokes from 9 hosts, filter by host/year/keyword, and reveal punchlines. Expanded from a fork of brendansudol/conan-jokes.",
+  "homepage": "https://briday1.github.io/late-night-monologues",
+  "scripts": {
+    "start": "npx --yes serve ."
+  }
+}

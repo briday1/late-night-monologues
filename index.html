@@ -1,0 +1,691 @@
+<!doctype html>
+<!--
+  Conan O'Brien joke library — a FORK / adaptation of Brendan Sudol's work.
+    • Original app:  https://github.com/brendansudol/conan-jokes
+    • Joke data:     https://github.com/brendansudol/conan-jokes-data
+  All original credit goes to Brendan Sudol (@brensudol).
+
+  Source for THIS fork: https://github.com/briday1/conan-jokes-setup
+
+  This version is a single static page (no build step, no dependencies). It loads
+  the joke database at runtime directly from the data repo's raw URL, so nothing
+  needs to be cloned or checked in here. Publish by serving this file on GitHub
+  Pages.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Conan O'Brien joke library — fork of brendansudol/conan-jokes</title>
+    <meta
+      name="description"
+      content="A fork of Brendan Sudol's Conan O'Brien monologue joke library. Search jokes, get a random one, and expand to reveal the punchline."
+    />
+    <style>
+      :root {
+        --bg: #0f1220;
+        --bg-soft: #171a2b;
+        --card: #1c2036;
+        --card-hover: #222741;
+        --text: #e8e9f0;
+        --muted: #9aa0b4;
+        --border: #2a2f4a;
+        --accent: #ff8a3d;
+        --accent-soft: #ff8a3d22;
+        --radius: 14px;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+
+      * { box-sizing: border-box; }
+
+      html { -webkit-text-size-adjust: 100%; }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(1200px 600px at 100% -10%, #23284a 0%, transparent 55%),
+          radial-gradient(900px 500px at -10% 0%, #1a1f3a 0%, transparent 50%),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+        min-height: 100vh;
+      }
+
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+
+      .wrap { max-width: 900px; margin: 0 auto; padding: 24px 20px 64px; }
+
+      /* Header ------------------------------------------------------------ */
+      .hero { padding: 28px 0 8px; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--bg-soft);
+        border: 1px solid var(--border);
+        padding: 5px 10px;
+        border-radius: 999px;
+      }
+      .badge .dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--accent); display: inline-block;
+      }
+      h1 {
+        font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+        line-height: 1.1;
+        margin: 16px 0 6px;
+        letter-spacing: -0.02em;
+      }
+      .subtitle { color: var(--muted); margin: 0; font-size: 0.98rem; }
+
+      /* Search ------------------------------------------------------------ */
+      .search {
+        margin: 24px 0 8px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .search form {
+        display: flex;
+        gap: 10px;
+        flex: 1 1 320px;
+        min-width: 0;
+      }
+      .field {
+        flex: 1 1 auto;
+        min-width: 0;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        color: var(--text);
+        font: inherit;
+        padding: 12px 14px;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      .field::placeholder { color: var(--muted); }
+      .field:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+
+      .btn {
+        appearance: none;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+        padding: 12px 16px;
+        transition: transform 0.05s ease, background 0.15s, border-color 0.15s;
+        white-space: nowrap;
+      }
+      .btn:active { transform: translateY(1px); }
+      .btn-primary { background: var(--accent); color: #201200; }
+      .btn-primary:hover { background: #ffa15f; }
+      .btn-ghost {
+        background: var(--card);
+        border-color: var(--border);
+        color: var(--text);
+      }
+      .btn-ghost:hover { background: var(--card-hover); }
+
+      /* Suggestions ------------------------------------------------------- */
+      .suggest-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin: 6px 0 0;
+      }
+      .chip {
+        background: var(--bg-soft);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--text);
+        cursor: pointer;
+        font-size: 0.85rem;
+        padding: 5px 12px;
+      }
+      .chip:hover { border-color: var(--accent); text-decoration: none; }
+
+      /* Status ------------------------------------------------------------ */
+      .status { color: var(--muted); font-size: 0.9rem; margin: 18px 0 0; }
+      .status.error { color: #ff6b6b; }
+      .spinner {
+        width: 14px; height: 14px; display: inline-block; vertical-align: -2px;
+        margin-right: 8px; border-radius: 50%;
+        border: 2px solid var(--border); border-top-color: var(--accent);
+        animation: spin 0.7s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      .result-meta { color: var(--muted); font-size: 0.9rem; margin: 20px 0 12px; }
+      .result-meta strong { color: var(--text); }
+
+      /* Cards ------------------------------------------------------------- */
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 18px 18px 16px;
+        margin: 0 0 16px;
+      }
+      .setup { font-size: 1.06rem; margin: 0 0 12px; }
+      .punchline {
+        font-size: 1.06rem;
+        font-weight: 700;
+        margin: 0 0 12px;
+        color: #fff;
+      }
+      .is-hidden { display: none; }
+
+      .reveal-btn {
+        background: var(--accent-soft);
+        border: 1px solid var(--accent);
+        border-radius: 999px;
+        color: var(--accent);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 6px 14px;
+        margin: 0 0 12px;
+      }
+      .reveal-btn:hover { background: #ff8a3d33; }
+
+      .card-foot {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        border-top: 1px solid var(--border);
+        padding-top: 12px;
+      }
+      .date { color: var(--muted); font-size: 0.82rem; margin-left: auto; }
+      .tag {
+        background: var(--bg-soft);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 0.78rem;
+        padding: 4px 10px;
+      }
+      .tag:hover { border-color: var(--accent); color: var(--text); text-decoration: none; }
+
+      /* Filters ----------------------------------------------------------- */
+      .filters {
+        background: var(--bg-soft);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px 16px;
+        margin: 14px 0 4px;
+      }
+      .filters-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .filters-row + .filters-row { margin-top: 12px; }
+      .filters-label {
+        color: var(--muted);
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-right: 2px;
+      }
+      .select {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        font: inherit;
+        font-size: 0.9rem;
+        padding: 7px 10px;
+        outline: none;
+      }
+      .select:focus { border-color: var(--accent); }
+      .filters-sep { color: var(--muted); font-size: 0.85rem; }
+      .host-toggles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+      }
+      .host-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--h-color, var(--border));
+        border-radius: 999px;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 0.82rem;
+        padding: 5px 12px 5px 10px;
+        user-select: none;
+        transition: color 0.12s, background 0.12s, border-color 0.12s;
+      }
+      .host-toggle input { display: none; }
+      .host-toggle .swatch {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: var(--h-color, var(--muted));
+        opacity: 0.35;
+        transition: opacity 0.12s;
+      }
+      .host-toggle.on {
+        color: var(--text);
+        background: var(--card-hover);
+      }
+      .host-toggle.on .swatch { opacity: 1; }
+      .link-btn {
+        background: none;
+        border: none;
+        color: var(--accent);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.82rem;
+        padding: 0;
+      }
+      .link-btn:hover { text-decoration: underline; }
+
+      /* Host-colored cards ------------------------------------------------ */
+      .card { border-left: 4px solid var(--h-color, var(--border)); }
+      .host-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 4px 11px;
+        color: var(--h-color, var(--text));
+        background: color-mix(in srgb, var(--h-color, #888) 15%, transparent);
+        border: 1px solid color-mix(in srgb, var(--h-color, #888) 45%, transparent);
+      }
+      .host-badge .swatch {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--h-color, var(--muted));
+      }
+
+      /* Footer ------------------------------------------------------------ */
+      footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      footer p { margin: 4px 0; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <h1>Late-Night Monologue Jokes</h1>
+        <p class="subtitle">
+          Search 15,000+ setup-and-punchline jokes from 9 hosts (2009–2026). Filter by
+          host and year, reveal the punchline when you're ready — or roll the
+          dice.
+        </p>
+      </header>
+
+      <main>
+        <div class="search">
+          <form id="search-form">
+            <input
+              id="search-input"
+              type="search"
+              class="field"
+              placeholder="Search by joke or topic…"
+              autocomplete="off"
+              aria-label="Search jokes"
+            />
+            <button type="submit" class="btn btn-primary">Search</button>
+          </form>
+          <button id="random-btn" type="button" class="btn btn-ghost">
+            🎲 Random
+          </button>
+        </div>
+
+        <div class="filters">
+          <div class="filters-row">
+            <span class="filters-label">Years</span>
+            <select id="year-from" class="select" aria-label="From year"></select>
+            <span class="filters-sep">to</span>
+            <select id="year-to" class="select" aria-label="To year"></select>
+          </div>
+          <div class="filters-row">
+            <span class="filters-label">Hosts</span>
+            <button type="button" id="hosts-all" class="link-btn">Select all</button>
+            <span class="filters-sep">·</span>
+            <button type="button" id="hosts-none" class="link-btn">Clear</button>
+          </div>
+          <div class="filters-row">
+            <div id="host-toggles" class="host-toggles"></div>
+          </div>
+        </div>
+
+        <div id="status" class="status"></div>
+        <div id="results"></div>
+      </main>
+
+      <footer>
+        <p>
+          Joke data compiled from
+          <a href="https://github.com/duowang/Monologue">duowang/Monologue</a>
+          (Newsmax &amp; Latenighter archives) and originally inspired by
+          <a href="https://github.com/brendansudol/conan-jokes">brendansudol/conan-jokes</a>.
+        </p>
+        <p>
+          This fork's source:
+          <a href="https://github.com/briday1/conan-jokes-setup">briday1/conan-jokes-setup</a>.
+        </p>
+      </footer>
+    </div>
+
+    <script>
+      // Cleaned, multi-host joke database committed alongside this page, so it
+      // loads same-origin (works on GitHub Pages with no CORS concerns).
+      var DATA_URL = "jokes.json";
+      var MAX_RESULTS = 300;
+
+      // One distinct color per host. Index matches the "hosts" array order in
+      // jokes.json.
+      var HOST_COLORS = [
+        "#ff8a3d", // Conan O'Brien
+        "#4dabf7", // Jimmy Fallon
+        "#38d9a9", // Jimmy Kimmel
+        "#f783ac", // Jay Leno
+        "#ffd43b", // Craig Ferguson
+        "#9775fa", // Seth Meyers
+        "#ff6b6b", // Stephen Colbert
+        "#a9e34b", // James Corden
+        "#63e6be", // David Letterman
+        "#ffa94d", // Jon Stewart
+      ];
+
+      var els = {
+        form: document.getElementById("search-form"),
+        input: document.getElementById("search-input"),
+        random: document.getElementById("random-btn"),
+        status: document.getElementById("status"),
+        results: document.getElementById("results"),
+        yearFrom: document.getElementById("year-from"),
+        yearTo: document.getElementById("year-to"),
+        hostToggles: document.getElementById("host-toggles"),
+        hostsAll: document.getElementById("hosts-all"),
+        hostsNone: document.getElementById("hosts-none"),
+      };
+
+      var HOSTS = []; // host display names
+      var JOKES = []; // [ [hostIndex, "YYYY-MM-DD", body], ... ]
+      var YEARS = []; // sorted distinct years present in the data
+
+      // Filter state — everything selected by default.
+      var STATE = { q: "", from: null, to: null, hosts: null };
+
+      var MONTHS = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+      ];
+
+      // --- helpers ----------------------------------------------------------
+
+      function esc(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function formatDate(iso) {
+        // "2016-05-04" -> "May 4, 2016"
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+        if (!m) return iso;
+        return MONTHS[+m[2] - 1] + " " + +m[3] + ", " + m[1];
+      }
+
+      // Split a joke body into sentences so we can hide the final one (punchline).
+      // Periods aren't always sentence ends: "no.com", "3.5", "Mr." etc. We mask
+      // those "inner" periods before splitting, then restore them afterward.
+      function splitSentences(text) {
+        var MASK = "\u0001";
+        var masked = text
+          .replace(/\.(?=(?:com|net|org|gov|edu|io|co|us|tv|ly|uk|ca)\b)/gi, MASK)
+          .replace(/(\d)\.(?=\d)/g, "$1" + MASK)
+          .replace(
+            /\b(?:Mr|Mrs|Ms|Dr|Jr|Sr|St|vs|Inc|Ltd|approx|Sen|Rep|Gov)\./gi,
+            function (m) {
+              return m.replace(".", MASK);
+            }
+          );
+        var matches = masked.match(/[^.!?]+[.!?]+(?:["')\]\u201d\u2019]+)?/g);
+        var out = (matches || [masked])
+          .map(function (s) { return s.trim(); })
+          .filter(Boolean);
+        return out.map(function (s) { return s.split(MASK).join("."); });
+      }
+
+      // --- data loading -----------------------------------------------------
+
+      function loadJokes() {
+        if (JOKES.length) return Promise.resolve();
+        setStatus("Loading joke database… (~5 MB, first load only)", "loading");
+        return fetch(DATA_URL)
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (data) {
+            HOSTS = data.hosts || [];
+            JOKES = data.jokes || [];
+            var ys = {};
+            JOKES.forEach(function (j) { ys[j[1].slice(0, 4)] = true; });
+            YEARS = Object.keys(ys).sort();
+            STATE.from = YEARS[0];
+            STATE.to = YEARS[YEARS.length - 1];
+            STATE.hosts = new Set(HOSTS.map(function (_, i) { return i; }));
+            buildFilterUI();
+            setStatus("");
+          });
+      }
+
+      function buildFilterUI() {
+        var yearOpts = YEARS.map(function (y) {
+          return '<option value="' + y + '">' + y + "</option>";
+        }).join("");
+        els.yearFrom.innerHTML = yearOpts;
+        els.yearTo.innerHTML = yearOpts;
+        els.yearFrom.value = STATE.from;
+        els.yearTo.value = STATE.to;
+
+        els.hostToggles.innerHTML = HOSTS.map(function (name, i) {
+          return (
+            '<label class="host-toggle on" data-host="' + i +
+            '" style="--h-color:' + HOST_COLORS[i] + '">' +
+            '<span class="swatch"></span>' + esc(name) + "</label>"
+          );
+        }).join("");
+      }
+
+      // --- filtering & rendering -------------------------------------------
+
+      function filteredJokes() {
+        var from = STATE.from, to = STATE.to;
+        if (from > to) { var tmp = from; from = to; to = tmp; }
+        var q = STATE.q.trim().toLowerCase();
+        return JOKES.filter(function (j) {
+          var year = j[1].slice(0, 4);
+          if (year < from || year > to) return false;
+          if (!STATE.hosts.has(j[0])) return false;
+          if (q && j[2].toLowerCase().indexOf(q) === -1) return false;
+          return true;
+        });
+      }
+
+      function renderJoke(j) {
+        var hi = j[0], date = j[1], body = j[2];
+        var sentences = splitSentences(body);
+        var setup = sentences.slice(0, -1).join(" ");
+        var punchline = sentences[sentences.length - 1] || body;
+        var color = HOST_COLORS[hi] || "#888";
+
+        var parts = [];
+        parts.push('<div class="card" style="--h-color:' + color + '">');
+        if (setup) parts.push('<p class="setup">' + esc(setup) + "</p>");
+        parts.push(
+          '<button type="button" class="reveal-btn">Reveal punchline ▾</button>'
+        );
+        parts.push('<p class="punchline is-hidden">' + esc(punchline) + "</p>");
+        parts.push('<div class="card-foot">');
+        parts.push(
+          '<span class="host-badge"><span class="swatch"></span>' +
+          esc(HOSTS[hi]) + "</span>"
+        );
+        if (date) parts.push('<span class="date">' + esc(formatDate(date)) + "</span>");
+        parts.push("</div></div>");
+        return parts.join("");
+      }
+
+      function renderResults() {
+        if (!JOKES.length) return;
+        var hits = filteredJokes();
+        var total = hits.length;
+
+        if (total === 0) {
+          els.results.innerHTML =
+            '<p class="result-meta">No jokes match those filters.</p>';
+          return;
+        }
+        var shown = Math.min(total, MAX_RESULTS);
+        var header =
+          '<p class="result-meta"><strong>' + total.toLocaleString() +
+          "</strong> jokes" +
+          (STATE.q.trim() ? " for <strong>" + esc(STATE.q) + "</strong>" : "") +
+          (total > shown ? " · showing first " + shown : "") + "</p>";
+        els.results.innerHTML =
+          header + hits.slice(0, shown).map(renderJoke).join("");
+      }
+
+      function runRandom() {
+        var hits = filteredJokes();
+        if (!hits.length) {
+          els.results.innerHTML =
+            '<p class="result-meta">No jokes match those filters.</p>';
+          return;
+        }
+        var j = hits[Math.floor(Math.random() * hits.length)];
+        els.results.innerHTML =
+          '<p class="result-meta">🎲 A random joke — hit Random for another.</p>' +
+          renderJoke(j);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function setStatus(msg, kind) {
+        if (!msg) {
+          els.status.className = "status";
+          els.status.textContent = "";
+          return;
+        }
+        els.status.className = "status" + (kind === "error" ? " error" : "");
+        els.status.innerHTML =
+          (kind === "loading" ? '<span class="spinner"></span>' : "") + esc(msg);
+      }
+
+      // --- controller -------------------------------------------------------
+
+      function ready(fn) {
+        loadJokes()
+          .then(fn)
+          .catch(function (err) {
+            setStatus("Sorry, couldn't load jokes: " + err.message, "error");
+          });
+      }
+
+      els.form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        STATE.q = els.input.value;
+        ready(renderResults);
+      });
+
+      els.random.addEventListener("click", function () {
+        ready(runRandom);
+      });
+
+      els.yearFrom.addEventListener("change", function () {
+        STATE.from = els.yearFrom.value;
+        renderResults();
+      });
+      els.yearTo.addEventListener("change", function () {
+        STATE.to = els.yearTo.value;
+        renderResults();
+      });
+
+      els.hostToggles.addEventListener("click", function (e) {
+        var label = e.target.closest(".host-toggle");
+        if (!label) return;
+        e.preventDefault();
+        var i = +label.getAttribute("data-host");
+        if (STATE.hosts.has(i)) {
+          STATE.hosts.delete(i);
+          label.classList.remove("on");
+        } else {
+          STATE.hosts.add(i);
+          label.classList.add("on");
+        }
+        renderResults();
+      });
+
+      els.hostsAll.addEventListener("click", function () {
+        STATE.hosts = new Set(HOSTS.map(function (_, i) { return i; }));
+        els.hostToggles.querySelectorAll(".host-toggle").forEach(function (l) {
+          l.classList.add("on");
+        });
+        renderResults();
+      });
+      els.hostsNone.addEventListener("click", function () {
+        STATE.hosts = new Set();
+        els.hostToggles.querySelectorAll(".host-toggle").forEach(function (l) {
+          l.classList.remove("on");
+        });
+        renderResults();
+      });
+
+      // Reveal punchline (event-delegated).
+      els.results.addEventListener("click", function (e) {
+        var reveal = e.target.closest(".reveal-btn");
+        if (reveal) {
+          var card = reveal.closest(".card");
+          var punchline = card.querySelector(".punchline");
+          if (punchline) punchline.classList.remove("is-hidden");
+          reveal.remove();
+        }
+      });
+
+      // Initial load: support deep links like index.html#Trump as a keyword,
+      // otherwise show everything (first page) with all filters selected.
+      (function () {
+        var initial = decodeURIComponent(location.hash.slice(1)).replace(/\+/g, " ");
+        ready(function () {
+          if (initial) {
+            STATE.q = initial;
+            els.input.value = initial;
+          }
+          renderResults();
+        });
+      })();
+    </script>
+  </body>
+</html>
