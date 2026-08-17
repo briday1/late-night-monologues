@@ -1,8 +1,9 @@
 # Late-Night Monologue Jokes
 
 A single-page, no-build joke library for late-night monologue jokes. Search
-**15,000+ setup-and-punchline jokes** from **9 hosts**, filter by host, year, and
-keyword, get a random joke, and expand to reveal the punchline.
+**26,000+ monologue jokes** from **9 hosts**, filter by host, year, and
+keyword, get a random joke, and expand to reveal the punchline (the last
+sentence of each joke).
 
 **Live site:** https://briday1.github.io/late-night-monologues
 
@@ -32,8 +33,10 @@ glance.
 This is a single, self-contained static page (index.html) with **no build step
 and no dependencies to install**. It loads a cleaned joke database (jokes.json,
 committed alongside the page) same-origin, so it works on GitHub Pages with no
-CORS concerns. The dataset keeps only clean two-sentence setup/punchline jokes.
-Search, filtering, and rendering are done client-side in plain JavaScript.
+CORS concerns. The dataset keeps multi-sentence jokes (2+ sentences); the final
+sentence is treated as the punchline. Single-sentence entries, transcript
+fragments, and bracketed stage directions are filtered out. Search, filtering,
+and rendering are done client-side in plain JavaScript.
 
 ## Run locally
 
