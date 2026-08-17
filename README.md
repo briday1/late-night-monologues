@@ -1,7 +1,7 @@
 # Late-Night Monologue Jokes
 
 A single-page, no-build joke library for late-night monologue jokes. Search
-**26,000+ monologue jokes** from **9 hosts**, filter by host, year, and
+**25,000+ monologue jokes** from **9 hosts**, filter by host, year, and
 keyword, get a random joke, and expand to reveal the punchline (the last
 sentence of each joke).
 
